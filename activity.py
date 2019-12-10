@@ -1,6 +1,7 @@
 import csv
 import sys
 import random
+import numpy
 
 def main():
     x_arr = []
@@ -13,32 +14,32 @@ def main():
             y_arr.append(float(row[3]))
             z_arr.append(float(row[4]))
     
-    if (len(sys.argv) > 3):
+    if (len(sys.argv) > 2):
         if (sys.argv[2] == 'f'):
             randFaults(z_arr, int(sys.argv[3]))
             randFaults(y_arr, int(sys.argv[3]))
             randFaults(x_arr, int(sys.argv[3]))
-
-    print("raw data")
-    print(z_arr)
+        elif (sys.argv[2] == 's'):
+            stuckFaults(z_arr, y_arr, x_arr)
     
-    findFaults(z_arr)            
-    findFaults(y_arr)            
-    findFaults(x_arr)            
+    z_arr2 = filterOutliers(z_arr)
+    y_arr2 = filterOutliers(y_arr)
+    x_arr2 = filterOutliers(x_arr)
+    findStuckFaults(z_arr2, "z")
+    findStuckFaults(y_arr2, "y")
+    findStuckFaults(x_arr2, "x")
 
-    print("after finding faults, before differentiation")
-    print(z_arr)
-
-    dif_arrz = difArray(z_arr) 
-    dif_arry = difArray(y_arr)
-    dif_arrx = difArray(x_arr)
-    
-    print("differential data")
-    print(dif_arrz)
+    dif_arrz = difArray(z_arr2) 
+    dif_arry = difArray(y_arr2)
+    dif_arrx = difArray(x_arr2)
     
     avgx = getAvg(dif_arrx)
     avgy = getAvg(dif_arry)
     avgz = getAvg(dif_arrz)
+    avg = (avgx + avgy + avgz)/3.0
+    print("avgx " + str(avgx) + " avgy " + str(avgy) + " avgz " + str(avgz)) 
+    print("avg " + str(avg)) 
+    print(len(z_arr))
     
     classify(avgx, avgy, avgz)
 
@@ -46,30 +47,27 @@ def main():
 def difArray(arr):
     dif_arr = []
     for i in range(len(arr)-1):
-        if (abs(arr[i+1] - arr[i]) > 0.5):
-            dif_arr.append(abs(arr[i+1] - arr[i]))
+        dif_arr.append(abs(arr[i+1] - arr[i]))
     return dif_arr
 
-
-def findFaults(arr):
-    for i in range(len(arr) - 2):
-        if (abs(arr[i+1]) - abs(arr[i]) > 10):
-            arr[i+1] = arr[i]
-#            arr[i+1] = (arr[i+2] + arr[i])/2
-#        if (arr[i+1] - arr[i] < 5):
-#            arr[i] = (arr[i+1] + arr[i-1])/2
+def filterOutliers(arr):
+    data = numpy.array(arr)
+    mean = numpy.mean(data, axis = 0)
+    sd = numpy.std(data, axis = 0)
+    filtered = [x for x in arr if ((x > mean - 2 * sd) and (x < mean + 2 * sd))]
+    return filtered
 
 
 def classify(avgx, avgy, avgz):
     avg = (avgx + avgy + avgz)/3.0
-    print(avg)
-    if (avg <= 0.1):
-        print("idle")  
-    if (avg > 0.1 and avg < 0.9):
+    if (avg <= 0.025):
+        print("sitting/idle")  
+    elif (avg > 0.025 and avg < 0.07):
         print("standing up")
-    if (avg > 0.9):
+    elif (avg > 0.07 and avg < 1.00):
         print("falling down")
-
+    else:
+        print("activity not recognized")
 
 def getAvg(arr):
     acc = 0
@@ -78,14 +76,46 @@ def getAvg(arr):
     if len(arr) == 0:
         return 0
     else:
-        return (acc/len(arr) - 0.5)
+        return (acc/len(arr))
 
+def stuckFaults(zarr, yarr, xarr):
+    xyz = []
+    xyz.append(zarr)  
+    xyz.append(yarr)  
+    xyz.append(xarr)  
+    arr = random.choice(xyz)
+    rand_idx = random.randint(0, len(arr)-(int(len(arr)/6)))
+    stuckval = arr[rand_idx] 
+    for i in range(rand_idx, len(arr)):
+        arr[i] = stuckval
+
+def findStuckFaults(arr, axis):
+    stuck = False
+    data = numpy.array(arr)
+    for x in range(10):
+        var = numpy.var(data[int(x/10.0 * len(arr)) : int(((x+1)/10.0*len(arr)))])
+        if (var < 0.000001): 
+            stuck = True
+    
+    if (stuck == True):
+        print("stuck-at fault " + axis + " axis")
+    
 
 def randFaults(arr, faults):
-    for i in range(faults):
+    data = numpy.array(arr)
+    mean = numpy.mean(data, axis = 0)
+    sd = numpy.std(data, axis = 0)
+
+    for i in range(faults/2):
+        sd_mult = random.uniform(3.0, 4.0)
         rand_idx = random.randint(0, len(arr)-1)
-#        num = random.randint(-67, 67)
-        num = random.randint(-27, 27)
+        num = random.uniform(mean + sd*3, mean + sd*sd_mult)
+        arr[rand_idx] = num
+
+    for i in range(faults/2, faults):
+        sd_mult = random.uniform(3.0, 4.0)
+        rand_idx = random.randint(0, len(arr)-1)
+        num = random.uniform(mean - sd*3, mean - sd*sd_mult)
         arr[rand_idx] = num
 
 
