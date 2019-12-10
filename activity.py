@@ -7,9 +7,11 @@ def main():
     x_arr = []
     y_arr = []
     z_arr = []
+    time = []
     with open(sys.argv[1]) as tsvfile:
         reader = csv.reader(tsvfile, delimiter ='\t')
         for row in reader:
+            time.append(float(row[1]))
             x_arr.append(float(row[2]))
             y_arr.append(float(row[3]))
             z_arr.append(float(row[4]))
@@ -25,6 +27,11 @@ def main():
     z_arr2 = filterOutliers(z_arr)
     y_arr2 = filterOutliers(y_arr)
     x_arr2 = filterOutliers(x_arr)
+
+    with open('./output.tsv', 'wt') as out_file:
+        tsv_writer = csv.writer(out_file, delimiter='\t')
+        tsv_writer.writerows(zip(time, x_arr, y_arr, z_arr))
+
     stuckz = findStuckFaults(z_arr2, "z")
     stucky = findStuckFaults(y_arr2, "y")
     stuckx = findStuckFaults(x_arr2, "x")
