@@ -25,9 +25,11 @@ def main():
     z_arr2 = filterOutliers(z_arr)
     y_arr2 = filterOutliers(y_arr)
     x_arr2 = filterOutliers(x_arr)
-    findStuckFaults(z_arr2, "z")
-    findStuckFaults(y_arr2, "y")
-    findStuckFaults(x_arr2, "x")
+    stuckz = findStuckFaults(z_arr2, "z")
+    stucky = findStuckFaults(y_arr2, "y")
+    stuckx = findStuckFaults(x_arr2, "x")
+    if (stuckx or stucky or stuckz):
+        return 0
 
     dif_arrz = difArray(z_arr2) 
     dif_arry = difArray(y_arr2)
@@ -37,9 +39,8 @@ def main():
     avgy = getAvg(dif_arry)
     avgz = getAvg(dif_arrz)
     avg = (avgx + avgy + avgz)/3.0
-    print("avgx " + str(avgx) + " avgy " + str(avgy) + " avgz " + str(avgz)) 
-    print("avg " + str(avg)) 
-    print(len(z_arr))
+#    print("avgx " + str(avgx) + " avgy " + str(avgy) + " avgz " + str(avgz)) 
+#    print("avg " + str(avg)) 
     
     classify(avgx, avgy, avgz)
 
@@ -61,13 +62,13 @@ def filterOutliers(arr):
 def classify(avgx, avgy, avgz):
     avg = (avgx + avgy + avgz)/3.0
     if (avg <= 0.025):
-        print("sitting/idle")  
+        print("Activity: Sitting")  
     elif (avg > 0.025 and avg < 0.07):
-        print("standing up")
+        print("Activity: Standing Up")
     elif (avg > 0.07 and avg < 1.00):
-        print("falling down")
+        print("Activity: Falling Down")
     else:
-        print("activity not recognized")
+        print("Activity not recognized")
 
 def getAvg(arr):
     acc = 0
@@ -84,6 +85,12 @@ def stuckFaults(zarr, yarr, xarr):
     xyz.append(yarr)  
     xyz.append(xarr)  
     arr = random.choice(xyz)
+    if (arr == zarr):
+        print('Stuck-at fault injected in z-array')
+    if (arr == yarr):
+        print('Stuck-at fault injected in y-array')
+    if (arr == xarr):
+        print('Stuck-at fault injected in x-array')
     rand_idx = random.randint(0, len(arr)-(int(len(arr)/6)))
     stuckval = arr[rand_idx] 
     for i in range(rand_idx, len(arr)):
@@ -98,7 +105,8 @@ def findStuckFaults(arr, axis):
             stuck = True
     
     if (stuck == True):
-        print("stuck-at fault " + axis + " axis")
+        print("Stuck-at fault identified in " + axis + "-array")
+    return stuck
     
 
 def randFaults(arr, faults):
